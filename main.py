@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-MODEL_PATH = "model.pkl"
+MODEL_PATH = "rf_model_lead.pkl"
 MODEL_URL = "https://drive.google.com/uc?id=1F0O0eQi8rNnICfQXm5UIdHtYJ0PiDMXv"
 
 # Download model jika belum ada
@@ -18,13 +18,19 @@ if not os.path.exists(MODEL_PATH):
 model = joblib.load(MODEL_PATH)
 
 # ==============================
-#   Input Schema (sesuai React)
+# Input Schema hanya fitur model
 # ==============================
 class LeadInput(BaseModel):
-    name: str
-    gender: str
-    phone_number: str
-    age: str
+    age: float
+    duration: float
+    campaign: float
+    pdays: float
+    previous: float
+    emp_var_rate: float
+    cons_price_idx: float
+    cons_conf_idx: float
+    euribor3m: float
+    nr_employed: float
     job: str
     marital: str
     education: str
@@ -33,59 +39,38 @@ class LeadInput(BaseModel):
     loan: str
     contact: str
     month: str
-    day: str
-    duration: str
-    campaign: str
-    pdays: str
-    previous: str
     poutcome: str
 
-    emp_var_rate: str
-    cons_price_idx: str
-    cons_conf_idx: str
-    euribor3m: str
-    nr_employed: str
-
-    lead_score: str
-    status_kampanye: str
-    aktivitas: str
-    alasan_status: str
-    subscription_status: str
-
-
 # ==============================
-#   Urutan fitur sesuai model
+# Urutan fitur sesuai model
 # ==============================
 FEATURE_ORDER = [
-    "name", "gender", "phone_number", "age", "job", "marital", "education",
-    "default_status", "housing", "loan", "contact", "month", "day",
-    "duration", "campaign", "pdays", "previous", "poutcome",
-    "emp_var_rate", "cons_price_idx", "cons_conf_idx", "euribor3m",
-    "nr_employed", "lead_score", "status_kampanye", "aktivitas",
-    "alasan_status", "subscription_status"
+    "age", "duration", "campaign", "pdays", "previous",
+    "emp_var_rate", "cons_price_idx", "cons_conf_idx",
+    "euribor3m", "nr_employed", "job", "marital", "education",
+    "default_status", "housing", "loan", "contact", "month",
+    "poutcome"
 ]
-
 
 @app.get("/")
 def home():
     return {"message": "ML API ready 🚀"}
 
-
 # ==============================
-#   Prediction Endpoint
+# Prediction Endpoint
 # ==============================
 @app.post("/predict")
 def predict(data: LeadInput):
-
-    # Convert input → dict
     d = data.dict()
 
-    # Convert ke array sesuai urutan kolom model
+    # Ambil hanya fitur model
     X = np.array([d[col] for col in FEATURE_ORDER]).reshape(1, -1)
 
     # Predict
     pred = model.predict(X)[0]
+    prob = model.predict_proba(X)[0][1]  # probabilitas positif
 
     return {
-        "prediction": int(pred)
+        "prediction": int(pred),
+        "probability": float(prob)
     }

@@ -2,12 +2,23 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import pandas as pd
 import joblib
+import gdown
+import os
 
 app = FastAPI()
 
+# ======= Download model dari Google Drive =======
+FILE_ID = "1F0O0eQi8rNnICfQXm5UIdHtYJ0PiDMXv"
+MODEL_PATH = "rf_model_lead.pkl"
+
+if not os.path.exists(MODEL_PATH):
+    url = f"https://drive.google.com/uc?id={FILE_ID}"
+    print("Downloading model from Google Drive...")
+    gdown.download(url, MODEL_PATH, quiet=False)
+
 # ======= Load model =======
-model = joblib.load("rf_model_lead.pkl")  # path model sesuaikan
-# ===========================
+model = joblib.load(MODEL_PATH)
+print("Model loaded successfully.")
 
 # ======= Request schema =======
 class LeadRequest(BaseModel):
@@ -35,7 +46,6 @@ class LeadRequest(BaseModel):
 @app.post("/predict")
 def predict(lead: LeadRequest):
     try:
-        # Map JSON ke nama fitur pipeline
         X = pd.DataFrame([{
             "age": lead.age,
             "duration": lead.duration,
@@ -58,12 +68,7 @@ def predict(lead: LeadRequest):
             "poutcome": lead.poutcome
         }])
 
-        # Predict
         pred = model.predict(X)[0]
-
-        # Optional: jika pakai predict_proba
-        # prob = model.predict_proba(X).max()
-
-        return {"prediction": int(pred)}  # kembalikan hasil prediksi
+        return {"prediction": int(pred)}
     except Exception as e:
         return {"error": str(e)}

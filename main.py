@@ -1,34 +1,26 @@
-from fastapi import FastAPI
-import pickle
-import numpy as np
 import os
-import download_model
+import joblib
+import gdown
+from fastapi import FastAPI
 
 app = FastAPI()
 
-# Pastikan model sudah didownload
-if not os.path.exists("model.pkl"):
-    download_model
+MODEL_PATH = "model.pkl"
+MODEL_URL = "https://drive.google.com/uc?id=1F0O0eQi8rNnICfQXm5UIdHtYJ0PiDMXv"  # ID file kamu
+
+# Download model jika belum ada
+if not os.path.exists(MODEL_PATH):
+    gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
 
 # Load model
-with open("model.pkl", "rb") as f:
-    model = pickle.load(f)
+model = joblib.load(MODEL_PATH)
 
 @app.get("/")
 def home():
-    return {"message": "ML API Running Successfully!"}
+    return {"message": "ML API ready"}
 
 @app.post("/predict")
 def predict(data: dict):
-    """
-    Format request:
-    {
-      "features": [value1, value2, value3, ...]
-    }
-    """
-    try:
-        features = np.array(data["features"]).reshape(1, -1)
-        prediction = model.predict(features)
-        return {"prediction": int(prediction[0])}
-    except Exception as e:
-        return {"error": str(e)}
+    features = data["features"]
+    pred = model.predict([features])
+    return {"prediction": int(pred[0])}
